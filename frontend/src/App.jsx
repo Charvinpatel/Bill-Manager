@@ -2,16 +2,16 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Navbar from "./components/Navbar";
-import Dashboard from "./pages/Dashboard";
-import CreateBill from "./pages/CreateBill";
-import BillHistory from "./pages/BillHistory";
+import Navbar from "./components/Navbar.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
+import CreateBill from "./pages/CreateBill.jsx";
+import BillHistory from "./pages/BillHistory.jsx";
 import "antd/dist/reset.css";
 
-function App() {
+export default function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50">
+      <div style={{ minHeight: "100vh", background: "#F5F3FF" }}>
         <Navbar />
         <main>
           <Routes>
@@ -20,18 +20,16 @@ function App() {
             <Route path="/history" element={<BillHistory />} />
           </Routes>
         </main>
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop
-          closeOnClick
-          pauseOnHover
-          theme="light"
-        />
       </div>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        pauseOnHover
+        theme="light"
+      />
     </Router>
   );
 }
-
-export default App;
