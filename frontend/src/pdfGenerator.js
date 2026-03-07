@@ -273,8 +273,11 @@ export const generateBillPDF = (bill) => {
 
   doc.roundedRect(boxX, grandY, 76, 10, 2, 2, "F");
 
-  doc.setTextColor(196, 181, 253);
-  doc.text("GRAND TOTAL", boxX + 6, finalY + 29);
+  const centerX = boxX + 76 / 2;
+
+doc.setTextColor(196, 181, 253);
+doc.text("GRAND TOTAL", centerX, grandY + 4, { align: "center" });
+
 
   doc.setTextColor(255, 255, 255);
   doc.text(formatCurrency(bill.grandTotal), W - 18, finalY + 29, {
