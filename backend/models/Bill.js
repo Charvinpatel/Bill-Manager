@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const billItemSchema = new mongoose.Schema({
   designName: { type: String, required: true },
-  designType: { type: String, default: "" }, // ← NEW: e.g. "Saree", "Dupatta", "Kurti"
+  designType: { type: String, default: "" },
   quantity: { type: Number, required: true },
   price: { type: Number, required: true },
   total: { type: Number, required: true },
@@ -13,6 +13,7 @@ const billSchema = new mongoose.Schema({
   vendorName: { type: String, required: true },
   vendorAddress: { type: String, default: "" },
   vendorPhone: { type: String, default: "" },
+  billDate: { type: Date, required: true },
   items: [billItemSchema],
   subtotal: { type: Number, required: true },
   taxRate: { type: Number, default: 0 },

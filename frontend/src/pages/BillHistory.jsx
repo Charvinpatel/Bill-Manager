@@ -47,6 +47,17 @@ const emptyItem = () => ({
   total: 0,
 });
 
+/* ── Safe date formatter: avoids timezone shift ── */
+const toDateInputValue = (dateStr) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "";
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 /* ── Edit Bill Yup Schema ── */
 const editSchema = Yup.object({
   vendorName: Yup.string()
@@ -57,6 +68,7 @@ const editSchema = Yup.object({
     .matches(/^$|^[6-9]\d{9}$/, "Invalid mobile number")
     .nullable(),
   vendorAddress: Yup.string().nullable(),
+  billDate: Yup.date().required("Date is required"),
   taxRate: Yup.number().min(0).max(100).required(),
   status: Yup.string().oneOf(["paid", "unpaid", "pending"]).required(),
   notes: Yup.string().nullable(),
@@ -207,9 +219,7 @@ const ActionBtn = ({
       flexShrink: 0,
     }}
     onMouseEnter={(e) => {
-      if (!disabled) {
-        e.currentTarget.style.filter = "brightness(0.85)";
-      }
+      if (!disabled) e.currentTarget.style.filter = "brightness(0.85)";
     }}
     onMouseLeave={(e) => {
       e.currentTarget.style.filter = "";
@@ -244,24 +254,28 @@ export default function BillHistory() {
   const [monthVendorsFetching, setMonthVendorsFetching] = useState(false);
   const [monthlyLoading, setMonthlyLoading] = useState(false);
 
-  /* ── Edit Formik ── */
+  /* ── Edit Formik ──
+     enableReinitialize: FALSE — values are set manually via resetForm in openEdit
+  ── */
   const editFormik = useFormik({
     initialValues: {
       vendorName: "",
       vendorPhone: "",
       vendorAddress: "",
+      billDate: "",
       taxRate: 0,
       status: "pending",
       notes: "",
       items: [emptyItem()],
     },
     validationSchema: editSchema,
-    enableReinitialize: true,
+    enableReinitialize: false,
     onSubmit: async (values, { setSubmitting }) => {
       setEditLoading(true);
       try {
         await updateBill(editBill._id, {
           ...values,
+          billDate: values.billDate,
           items: values.items.map((i) => ({
             designName: i.designName.trim(),
             designType: i.designType || "",
@@ -333,6 +347,7 @@ export default function BillHistory() {
       toast.error("Failed to delete");
     }
   };
+
   const handleStatusChange = async (id, status) => {
     try {
       await updateBillStatus(id, status);
@@ -343,18 +358,26 @@ export default function BillHistory() {
     }
   };
 
+  /* ── Open Edit: populate ALL previous values correctly ── */
   const openEdit = (bill) => {
-    editFormik.resetForm({
-      values: {
-        vendorName: bill.vendorName,
-        vendorPhone: bill.vendorPhone || "",
-        vendorAddress: bill.vendorAddress || "",
-        taxRate: bill.taxRate || 0,
-        status: bill.status,
-        notes: bill.notes || "",
-        items: bill.items.map((i) => ({ ...i })),
-      },
-    });
+    const newValues = {
+      vendorName: bill.vendorName || "",
+      vendorPhone: bill.vendorPhone || "",
+      vendorAddress: bill.vendorAddress || "",
+      billDate: toDateInputValue(bill.billDate || bill.createdAt),
+      taxRate: bill.taxRate ?? 0,
+      status: bill.status || "pending",
+      notes: bill.notes || "",
+      items: bill.items.map((i) => ({
+        designName: i.designName || "",
+        designType: i.designType || "",
+        quantity: i.quantity ?? 1,
+        price: i.price ?? "",
+        total: i.total ?? 0,
+      })),
+    };
+    // resetForm sets values AND clears touched/errors — no stale validation artifacts
+    editFormik.resetForm({ values: newValues });
     setEditBill(bill);
   };
 
@@ -452,7 +475,7 @@ export default function BillHistory() {
     }
   };
 
-  /* ── Status colour for inline dropdown ── */
+  /* ── Status colour ── */
   const statusStyle = (s) => ({
     background:
       s === "paid" ? "#DCFCE7" : s === "unpaid" ? "#FEE2E2" : "#FEF3C7",
@@ -579,7 +602,7 @@ export default function BillHistory() {
             </div>
             <Select
               value={statusFilter}
-              style={{ flex: "0 0 130px" }}
+              style={{ flex: "0 0 130px", height: "42.6px" }}
               onChange={(value) => setStatusFilter(value)}
               options={[
                 { value: "all", label: "All Status" },
@@ -590,7 +613,7 @@ export default function BillHistory() {
             />
             <Select
               value={sortBy}
-              style={{ flex: "0 0 148px" }}
+              style={{ flex: "0 0 148px", height: "42.6px" }}
               onChange={(value) => setSortBy(value)}
               options={[
                 { value: "newest", label: "Newest First" },
@@ -697,9 +720,9 @@ export default function BillHistory() {
                             </span>
                           </td>
                           <td style={{ color: "#6B7280" }}>
-                            {new Date(bill.createdAt).toLocaleDateString(
-                              "en-IN",
-                            )}
+                            {new Date(
+                              bill.billDate || bill.createdAt,
+                            ).toLocaleDateString("en-IN")}
                           </td>
                           <td
                             style={{
@@ -717,6 +740,7 @@ export default function BillHistory() {
                               style={{
                                 ...statusStyle(bill.status),
                                 width: 120,
+                                height: "32px",
                               }}
                               onChange={(value) =>
                                 handleStatusChange(bill._id, value)
@@ -1020,7 +1044,7 @@ export default function BillHistory() {
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
-                        alignItems: "flex-start",
+                        alignItems: "center",
                         marginBottom: 8,
                       }}
                     >
@@ -1044,6 +1068,7 @@ export default function BillHistory() {
                           ...statusStyle(bill.status),
                           fontSize: 11,
                           width: 110,
+                          height: "32px",
                         }}
                         onChange={(value) =>
                           handleStatusChange(bill._id, value)
@@ -1090,7 +1115,9 @@ export default function BillHistory() {
                             marginTop: 4,
                           }}
                         >
-                          {new Date(bill.createdAt).toLocaleDateString("en-IN")}{" "}
+                          {new Date(
+                            bill.billDate || bill.createdAt,
+                          ).toLocaleDateString("en-IN")}{" "}
                           · {bill.items.length} item
                           {bill.items.length !== 1 ? "s" : ""}
                         </p>
@@ -1106,7 +1133,6 @@ export default function BillHistory() {
                       </p>
                     </div>
                   </div>
-                  {/* Actions strip */}
                   <div
                     style={{
                       borderTop: "1px solid #F3F4F6",
@@ -1116,99 +1142,68 @@ export default function BillHistory() {
                       flexWrap: "wrap",
                     }}
                   >
-                    <button
-                      onClick={() =>
-                        setExpandedId(expandedId === bill._id ? null : bill._id)
-                      }
-                      style={{
-                        flex: 1,
-                        minWidth: 60,
-                        padding: "7px 10px",
-                        borderRadius: 9,
-                        background: "#EDE9FE",
+                    {[
+                      {
+                        label: expandedId === bill._id ? "Hide" : "Items",
+                        icon: <IDown up={expandedId === bill._id} />,
+                        bg: "#EDE9FE",
                         color: "#7C3AED",
-                        border: "1.5px solid #DDD6FE",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        fontFamily: "DM Sans,sans-serif",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 4,
-                      }}
-                    >
-                      <IDown up={expandedId === bill._id} />{" "}
-                      {expandedId === bill._id ? "Hide" : "Items"}
-                    </button>
-                    <button
-                      onClick={() => generateBillPDF(bill)}
-                      style={{
-                        flex: 1,
-                        minWidth: 60,
-                        padding: "7px 10px",
-                        borderRadius: 9,
-                        background: "#EDE9FE",
+                        border: "#DDD6FE",
+                        action: () =>
+                          setExpandedId(
+                            expandedId === bill._id ? null : bill._id,
+                          ),
+                      },
+                      {
+                        label: "PDF",
+                        icon: <IDl />,
+                        bg: "#EDE9FE",
                         color: "#7C3AED",
-                        border: "1.5px solid #DDD6FE",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        fontFamily: "DM Sans,sans-serif",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 4,
-                      }}
-                    >
-                      <IDl /> PDF
-                    </button>
-                    <button
-                      onClick={() => openEdit(bill)}
-                      style={{
-                        flex: 1,
-                        minWidth: 60,
-                        padding: "7px 10px",
-                        borderRadius: 9,
-                        background: "#DCFCE7",
+                        border: "#DDD6FE",
+                        action: () => generateBillPDF(bill),
+                      },
+                      {
+                        label: "Edit",
+                        icon: <IEdit />,
+                        bg: "#DCFCE7",
                         color: "#16A34A",
-                        border: "1.5px solid #86EFAC",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        fontFamily: "DM Sans,sans-serif",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 4,
-                      }}
-                    >
-                      <IEdit /> Edit
-                    </button>
-                    <button
-                      onClick={() => setDeleteId(bill._id)}
-                      style={{
-                        flex: 1,
-                        minWidth: 60,
-                        padding: "7px 10px",
-                        borderRadius: 9,
-                        background: "#FEE2E2",
+                        border: "#86EFAC",
+                        action: () => openEdit(bill),
+                      },
+                      {
+                        label: "Delete",
+                        icon: <ITrash />,
+                        bg: "#FEE2E2",
                         color: "#EF4444",
-                        border: "1.5px solid #FECACA",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        fontFamily: "DM Sans,sans-serif",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 4,
-                      }}
-                    >
-                      <ITrash /> Delete
-                    </button>
+                        border: "#FECACA",
+                        action: () => setDeleteId(bill._id),
+                      },
+                    ].map(({ label, icon, bg, color, border, action }) => (
+                      <button
+                        key={label}
+                        onClick={action}
+                        style={{
+                          flex: 1,
+                          minWidth: 60,
+                          padding: "7px 10px",
+                          borderRadius: 9,
+                          background: bg,
+                          color,
+                          border: `1.5px solid ${border}`,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          fontFamily: "DM Sans,sans-serif",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 4,
+                        }}
+                      >
+                        {icon} {label}
+                      </button>
+                    ))}
                   </div>
-                  {/* Mobile expanded items */}
                   {expandedId === bill._id && (
                     <div
                       style={{
@@ -1333,9 +1328,7 @@ export default function BillHistory() {
         </p>
       </div>
 
-      {/* ════════════════════════════════════
-          MONTHLY PDF PICKER MODAL
-      ════════════════════════════════════ */}
+      {/* ════════════════ MONTHLY PDF MODAL ════════════════ */}
       {showMonthPicker && (
         <div className="modal-overlay">
           <div
@@ -1388,11 +1381,9 @@ export default function BillHistory() {
                 </p>
               </div>
             </div>
-
             <div
               style={{ height: 1, background: "#F3F4F6", marginBottom: 18 }}
             />
-
             <div
               style={{
                 display: "grid",
@@ -1405,12 +1396,9 @@ export default function BillHistory() {
                 <label className="sp-label">Month</label>
                 <Select
                   value={monthYear.month}
-                  style={{ width: 140 }}
+                  style={{ width: 140, height: "42.6px" }}
                   onChange={(value) => handleMonthPickerChange("month", value)}
-                  options={MONTHS.map((m, i) => ({
-                    value: i + 1,
-                    label: m,
-                  }))}
+                  options={MONTHS.map((m, i) => ({ value: i + 1, label: m }))}
                 />
               </div>
               <div>
@@ -1430,7 +1418,6 @@ export default function BillHistory() {
                 />
               </div>
             </div>
-
             <div style={{ marginBottom: 20 }}>
               <label className="sp-label">Vendor</label>
               {monthVendorsFetching ? (
@@ -1453,17 +1440,14 @@ export default function BillHistory() {
               ) : (
                 <Select
                   value={monthVendorFilter}
-                  style={{ width: 180 }}
+                  style={{ width: 180, height: "42.6px" }}
                   onChange={(value) => setMonthVendorFilter(value)}
                   options={[
                     {
                       value: "all",
                       label: `All Vendors (${monthVendorNames.length})`,
                     },
-                    ...monthVendorNames.map((v) => ({
-                      value: v,
-                      label: v,
-                    })),
+                    ...monthVendorNames.map((v) => ({ value: v, label: v })),
                   ]}
                 />
               )}
@@ -1487,7 +1471,6 @@ export default function BillHistory() {
                 </p>
               )}
             </div>
-
             <div style={{ display: "flex", gap: 10 }}>
               <button
                 onClick={() => {
@@ -1521,9 +1504,7 @@ export default function BillHistory() {
         </div>
       )}
 
-      {/* ════════════════════════════════════
-          EDIT BILL MODAL — Formik + Yup
-      ════════════════════════════════════ */}
+      {/* ════════════════ EDIT BILL MODAL ════════════════ */}
       {editBill && (
         <div
           className="modal-overlay"
@@ -1540,7 +1521,6 @@ export default function BillHistory() {
               maxWidth: 760,
               width: "100%",
               boxShadow: "0 24px 64px rgba(30,10,78,0.2)",
-              my: 20,
             }}
           >
             {/* Header */}
@@ -1600,7 +1580,7 @@ export default function BillHistory() {
             </div>
 
             <form onSubmit={editFormik.handleSubmit} noValidate>
-              {/* Vendor fields */}
+              {/* ── Vendor + Date ── */}
               <div
                 style={{
                   display: "grid",
@@ -1611,8 +1591,8 @@ export default function BillHistory() {
               >
                 {[
                   ["vendorName", "Vendor Name", true, "Vendor name"],
-                  ["vendorPhone", "Phone", "", "9876543210"],
-                  ["vendorAddress", "Address", "", "City, State"],
+                  ["vendorPhone", "Phone", false, "9876543210"],
+                  ["vendorAddress", "Address", false, "City, State"],
                 ].map(([name, label, req, ph]) => (
                   <div key={name}>
                     <label className="sp-label">
@@ -1632,9 +1612,26 @@ export default function BillHistory() {
                     )}
                   </div>
                 ))}
+                <div>
+                  <label className="sp-label">
+                    Bill Date <span style={{ color: "#EF4444" }}>*</span>
+                  </label>
+                  <input
+                    type="date"
+                    name="billDate"
+                    value={editFormik.values.billDate || ""}
+                    onChange={editFormik.handleChange}
+                    onBlur={editFormik.handleBlur}
+                    className={`sp-input${editFormik.touched.billDate && editFormik.errors.billDate ? " is-error" : ""}`}
+                  />
+                  {editFormik.touched.billDate &&
+                    editFormik.errors.billDate && (
+                      <p className="sp-err">{editFormik.errors.billDate}</p>
+                    )}
+                </div>
               </div>
 
-              {/* Items */}
+              {/* ── Items ── */}
               <div style={{ marginBottom: 16 }}>
                 <div
                   style={{
@@ -1674,7 +1671,7 @@ export default function BillHistory() {
                   </button>
                 </div>
 
-                {/* Desktop edit table */}
+                {/* Desktop */}
                 <div
                   style={{
                     border: "1.5px solid #E5E7EB",
@@ -1765,7 +1762,12 @@ export default function BillHistory() {
                               size="small"
                               value={item.designType || undefined}
                               placeholder="None"
-                              style={{ width: 110, fontSize: 13 }}
+                              style={{
+                                width: 110,
+                                fontSize: 13,
+                                height: "41.1px",
+                                borderRadius: "10px",
+                              }}
                               onChange={(value) =>
                                 setEditItem(idx, "designType", value)
                               }
@@ -1872,7 +1874,7 @@ export default function BillHistory() {
                   </table>
                 </div>
 
-                {/* Mobile edit items */}
+                {/* Mobile */}
                 <div className="show-mobile-items" style={{ display: "none" }}>
                   {ev.items.map((item, idx) => (
                     <div
@@ -1954,7 +1956,12 @@ export default function BillHistory() {
                             size="small"
                             value={item.designType || undefined}
                             placeholder="None"
-                            style={{ fontSize: 13, width: "100%" }}
+                            style={{
+                              fontSize: 13,
+                              width: "100%",
+                              height: "41.1px",
+                              borderRadius: "10px",
+                            }}
                             onChange={(value) =>
                               setEditItem(idx, "designType", value)
                             }
@@ -2023,7 +2030,7 @@ export default function BillHistory() {
                 </div>
               </div>
 
-              {/* Bottom: status + summary */}
+              {/* ── GST / Status / Notes + Summary ── */}
               <div
                 style={{
                   display: "grid",
@@ -2056,7 +2063,11 @@ export default function BillHistory() {
                     <Select
                       size="middle"
                       value={ev.status}
-                      style={{ width: "100%" }}
+                      style={{
+                        width: "100%",
+                        height: "42.6px",
+                        borderRadius: "10px",
+                      }}
                       onChange={(value) =>
                         editFormik.setFieldValue("status", value)
                       }
@@ -2078,7 +2089,6 @@ export default function BillHistory() {
                     />
                   </div>
                 </div>
-
                 <div
                   style={{
                     background: "linear-gradient(135deg,#1e0a4e,#3730A3)",
@@ -2187,9 +2197,7 @@ export default function BillHistory() {
         </div>
       )}
 
-      {/* ════════════════════════════════════
-          DELETE CONFIRM MODAL
-      ════════════════════════════════════ */}
+      {/* ════════════════ DELETE MODAL ════════════════ */}
       {deleteId && (
         <div className="modal-overlay">
           <div

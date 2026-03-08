@@ -36,6 +36,7 @@ const schema = Yup.object({
     .matches(/^$|^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number")
     .nullable(),
   vendorAddress: Yup.string().nullable(),
+  billDate: Yup.date().required("Bill date is required"),
   taxRate: Yup.number().min(0, "Min 0").max(100, "Max 100").required(),
   status: Yup.string().oneOf(["paid", "unpaid", "pending"]).required(),
   notes: Yup.string().nullable(),
@@ -151,6 +152,22 @@ const IBill = () => (
     <path d="M14 2H6a2 2 0 0 0-2 2v16l3-2 3 2 3-2 3 2 3-2 3 2V4a2 2 0 0 0-2-2z" />
     <line x1="16" y1="9" x2="8" y2="9" />
     <line x1="16" y1="13" x2="8" y2="13" />
+  </svg>
+);
+const ICal = () => (
+  <svg
+    width="19"
+    height="19"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#7C3AED"
+    strokeWidth="2"
+    strokeLinecap="round"
+  >
+    <rect x="3" y="4" width="18" height="18" rx="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
   </svg>
 );
 
@@ -286,8 +303,16 @@ const SuccessScreen = ({ bill, onReset, onHistory }) => (
           {bill.billNumber}
         </span>
       </p>
-      <p style={{ color: "#6B7280", fontSize: 14, marginBottom: 22 }}>
+      <p style={{ color: "#6B7280", fontSize: 14, marginBottom: 4 }}>
         Vendor: <strong style={{ color: "#111827" }}>{bill.vendorName}</strong>
+      </p>
+      <p style={{ color: "#6B7280", fontSize: 14, marginBottom: 22 }}>
+        Date:{" "}
+        <strong style={{ color: "#111827" }}>
+          {new Date(bill.billDate || bill.createdAt).toLocaleDateString(
+            "en-IN",
+          )}
+        </strong>
       </p>
       <div
         style={{
@@ -351,6 +376,7 @@ export default function CreateBill() {
       vendorName: "",
       vendorPhone: "",
       vendorAddress: "",
+      billDate: new Date().toISOString().split("T")[0],
       taxRate: 0,
       status: "pending",
       notes: "",
@@ -361,6 +387,7 @@ export default function CreateBill() {
       try {
         const payload = {
           ...values,
+          billDate: values.billDate,
           items: values.items.map((i) => ({
             designName: i.designName.trim(),
             designType: i.designType || "",
@@ -425,7 +452,6 @@ export default function CreateBill() {
   const taxAmount = (subtotal * (parseFloat(values.taxRate) || 0)) / 100;
   const grandTotal = subtotal + taxAmount;
 
-  /* ── Reset ── */
   const handleReset = () => {
     setCreatedBill(null);
     resetForm();
@@ -443,7 +469,7 @@ export default function CreateBill() {
   return (
     <div style={{ background: "#F5F3FF", minHeight: "100vh" }}>
       <div style={{ maxWidth: 1020, margin: "0 auto", padding: "28px 20px" }}>
-        {/* Page header */}
+        {/* ── Page Header ── */}
         <div style={{ marginBottom: 22 }}>
           <p
             style={{
@@ -529,6 +555,23 @@ export default function CreateBill() {
                   onBlur={handleBlur}
                   placeholder="Surat, Gujarat"
                   className="sp-input"
+                />
+              </F>
+
+              {/* ── Bill Date ── */}
+              <F
+                label="Bill Date"
+                required
+                err={errors.billDate}
+                touched={touched.billDate}
+              >
+                <input
+                  type="date"
+                  name="billDate"
+                  value={values.billDate}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`sp-input${touched.billDate && errors.billDate ? " is-error" : ""}`}
                 />
               </F>
             </div>
@@ -667,7 +710,11 @@ export default function CreateBill() {
                         <Select
                           value={item.designType || undefined}
                           placeholder="Select type"
-                          style={{ width: 132 }}
+                          style={{
+                            width: 132,
+                            borderRadius: "10px",
+                            height: "42.6px",
+                          }}
                           onChange={(value) =>
                             setItem(idx, "designType", value)
                           }
@@ -887,14 +934,15 @@ export default function CreateBill() {
                       <Select
                         value={item.designType || undefined}
                         placeholder="None"
-                        style={{ width: 140 }}
+                        style={{
+                          width: "100%",
+                          borderRadius: "10px",
+                          height: "42.6px",
+                        }}
                         onChange={(value) => setItem(idx, "designType", value)}
                         options={[
                           { value: "", label: "None" },
-                          ...DESIGN_TYPES.map((t) => ({
-                            value: t,
-                            label: t,
-                          })),
+                          ...DESIGN_TYPES.map((t) => ({ value: t, label: t })),
                         ]}
                       />
                     </div>
@@ -1066,10 +1114,6 @@ export default function CreateBill() {
                           e.target.style.boxShadow =
                             "0 0 0 2px rgba(124,58,237,0.1)";
                         }}
-                        onBlur2={(e) => {
-                          e.target.style.borderColor = "#E5E7EB";
-                          e.target.style.boxShadow = "none";
-                        }}
                       />
                     </span>
                     <span
@@ -1142,11 +1186,13 @@ export default function CreateBill() {
               <F label="Payment Status">
                 <Select
                   value={values.status}
-                  style={{ width: "100%" }}
+                  style={{
+                    width: "100%",
+                    borderRadius: "10px",
+                    height: "42.6px",
+                  }}
                   onChange={(value) =>
-                    handleChange({
-                      target: { name: "status", value },
-                    })
+                    handleChange({ target: { name: "status", value } })
                   }
                   options={[
                     { value: "pending", label: "Pending" },
