@@ -94,7 +94,7 @@ const drawBillsTable = (doc, bills, startY) => {
     i + 1,
     b.vendorName || "-",
     b.billNumber,
-    formatDate(b.createdAt),
+    formatDate(b.billDate || b.createdAt),
     itemsToText(b.items),
     b.status.toUpperCase(),
     formatCurrency(b.subtotal),
@@ -186,7 +186,7 @@ export const generateBillPDF = (bill) => {
   doc.setTextColor(55, 65, 81);
 
   doc.text(`Vendor: ${bill.vendorName}`, 14, 45);
-  doc.text(`Date: ${formatDate(bill.createdAt)}`, W - 14, 45, {
+  doc.text(`Date: ${formatDate(bill.billDate || bill.createdAt)}`, W - 14, 45, {
     align: "right",
   });
 
@@ -275,9 +275,8 @@ export const generateBillPDF = (bill) => {
 
   const centerX = boxX + 76 / 2;
 
-doc.setTextColor(196, 181, 253);
-doc.text("GRAND TOTAL", centerX, grandY + 4, { align: "center" });
-
+  doc.setTextColor(196, 181, 253);
+  doc.text("GRAND TOTAL", centerX, grandY + 4, { align: "center" });
 
   doc.setTextColor(255, 255, 255);
   doc.text(formatCurrency(bill.grandTotal), W - 18, finalY + 29, {

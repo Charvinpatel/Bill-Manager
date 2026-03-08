@@ -198,8 +198,13 @@ exports.getBillsByMonth = async (req, res) => {
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 0, 23, 59, 59, 999);
 
-    // ✅ Query on billDate only — it's required on all bills now
-    const dateFilter = { billDate: { $gte: start, $lte: end } };
+    // ✅ Query on billDate OR createdAt so both old and new bills are included
+    const dateFilter = {
+      $or: [
+        { billDate: { $gte: start, $lte: end } },
+        { billDate: { $exists: false }, createdAt: { $gte: start, $lte: end } },
+      ],
+    };
 
     const query = vendorName
       ? {

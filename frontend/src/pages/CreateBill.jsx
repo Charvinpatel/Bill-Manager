@@ -376,7 +376,7 @@ export default function CreateBill() {
       vendorName: "",
       vendorPhone: "",
       vendorAddress: "",
-      billDate: new Date().toISOString().split("T")[0],
+      billDate: "",
       taxRate: 0,
       status: "pending",
       notes: "",
