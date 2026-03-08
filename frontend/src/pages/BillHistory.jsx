@@ -284,7 +284,7 @@ export default function BillHistory() {
             total: parseFloat(i.quantity) * parseFloat(i.price),
           })),
         });
-        toast.success("✅ Bill updated successfully!");
+        toast.success("Bill updated successfully!");
         setEditBill(null);
         fetchBills();
       } catch (err) {
@@ -340,7 +340,7 @@ export default function BillHistory() {
   const handleDelete = async (id) => {
     try {
       await deleteBill(id);
-      toast.success("🗑️ Bill deleted");
+      toast.success("Bill deleted");
       setDeleteId(null);
       fetchBills();
     } catch {
@@ -466,7 +466,7 @@ export default function BillHistory() {
           [vd],
         );
       }
-      toast.success("📊 Monthly PDF downloaded!");
+      toast.success("Monthly PDF downloaded!");
       setShowMonthPicker(false);
     } catch {
       toast.error("Failed to generate report");

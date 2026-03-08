@@ -398,9 +398,7 @@ export default function CreateBill() {
         };
         const res = await createBill(payload);
         setCreatedBill(res.data.bill);
-        toast.success(
-          `✅ Bill ${res.data.bill.billNumber} created successfully!`,
-        );
+        toast.success(`Bill ${res.data.bill.billNumber} created successfully!`);
       } catch (err) {
         toast.error(err.response?.data?.message || "Failed to create bill");
       } finally {
