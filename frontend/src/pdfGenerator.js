@@ -271,15 +271,15 @@ export const generateBillPDF = (bill) => {
   doc.setFillColor(30, 10, 78);
   const grandY = bill.taxRate > 0 ? finalY + 26 : finalY + 18;
 
-  doc.roundedRect(boxX, grandY, 76, 10, 2, 2, "F");
+  doc.roundedRect(boxX, grandY, 76, 12, 2, 2, "F");
 
-  const centerX = boxX + 76 / 2;
-
+  doc.setFontSize(9);
   doc.setTextColor(196, 181, 253);
-  doc.text("GRAND TOTAL", centerX, grandY + 4, { align: "center" });
+  doc.text("GRAND TOTAL", boxX + 6, grandY + 8);
 
+  doc.setFontSize(10);
   doc.setTextColor(255, 255, 255);
-  doc.text(formatCurrency(bill.grandTotal), W - 18, finalY + 29, {
+  doc.text(formatCurrency(bill.grandTotal), boxX + 70, grandY + 8, {
     align: "right",
   });
 
