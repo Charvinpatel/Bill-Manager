@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-// const API = axios.create({ baseURL: 'https://bill-manager-sannipatel.onrender.com/api' })
+// const API = axios.create({ baseURL: 'https://bill-manager-nazk.onrender.com/api' })
 
 
 const API = axios.create({ baseURL: '/api' })
