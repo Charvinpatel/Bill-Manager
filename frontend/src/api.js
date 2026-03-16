@@ -1,9 +1,6 @@
 import axios from 'axios'
 
-// const API = axios.create({ baseURL: 'https://bill-manager-nazk.onrender.com/api' })
-
-
-const API = axios.create({ baseURL: '/api' })
+const API = axios.create({ baseURL: 'https://bill-manager-nazk.onrender.com/api' })
 
 export const getAllBills       = (params = {}) => API.get('/bills', { params })
 export const getBillById       = (id)         => API.get(`/bills/${id}`)
