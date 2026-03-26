@@ -80,7 +80,7 @@ const drawFooter = (doc) => {
    BILL TABLE
 ============================================================ */
 
-const drawBillsTable = (doc, bills, startY) => {
+const drawBillsTable = (doc, bills, startY, title, subtitle) => {
   const rows = [];
   let rowCount = 1;
 
@@ -103,6 +103,12 @@ const drawBillsTable = (doc, bills, startY) => {
 
   autoTable(doc, {
     startY,
+    margin: { top: 40, bottom: 20 },
+
+    didDrawPage: (data) => {
+      drawHeader(doc, title, subtitle);
+      drawFooter(doc);
+    },
 
     head: [
       [
@@ -303,22 +309,31 @@ export const generateMonthlyPDF = (bills, year, month) => {
     month: "long",
   });
 
-  drawHeader(doc, "MONTHLY REPORT", `${monthName} ${year}`);
+  const title = "MONTHLY REPORT";
+  const subtitle = `${monthName} ${year}`;
 
-  const finalY = drawBillsTable(doc, bills, 40);
+  const finalY = drawBillsTable(doc, bills, 40, title, subtitle);
 
   const total = bills.reduce((sum, b) => sum + b.grandTotal, 0);
 
+  const H = doc.internal.pageSize.height;
+  let summaryY = finalY + 6;
+
+  if (summaryY + 12 > H - 15) {
+    doc.addPage();
+    drawHeader(doc, title, subtitle);
+    drawFooter(doc);
+    summaryY = 40;
+  }
+
   doc.setFillColor(30, 10, 78);
-  doc.roundedRect(200, finalY + 6, 80, 10, 2, 2, "F");
+  doc.roundedRect(200, summaryY, 80, 10, 2, 2, "F");
 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(10);
 
-  doc.text("MONTH TOTAL", 205, finalY + 12);
-  doc.text(formatCurrency(total), 275, finalY + 12, { align: "right" });
-
-  drawFooter(doc);
+  doc.text("MONTH TOTAL", 205, summaryY + 6);
+  doc.text(formatCurrency(total), 275, summaryY + 6, { align: "right" });
 
   doc.save(`Monthly-Report-${monthName}-${year}.pdf`);
 };
@@ -331,23 +346,31 @@ export const generateDailyPDF = (bills, date) => {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
   const day = formatDate(date);
+  const title = "DAILY REPORT";
+  const subtitle = day;
 
-  drawHeader(doc, "DAILY REPORT", day);
-
-  const finalY = drawBillsTable(doc, bills, 40);
+  const finalY = drawBillsTable(doc, bills, 40, title, subtitle);
 
   const total = bills.reduce((sum, b) => sum + b.grandTotal, 0);
 
+  const H = doc.internal.pageSize.height;
+  let summaryY = finalY + 6;
+
+  if (summaryY + 12 > H - 15) {
+    doc.addPage();
+    drawHeader(doc, title, subtitle);
+    drawFooter(doc);
+    summaryY = 40;
+  }
+
   doc.setFillColor(30, 10, 78);
-  doc.roundedRect(200, finalY + 6, 80, 10, 2, 2, "F");
+  doc.roundedRect(200, summaryY, 80, 10, 2, 2, "F");
 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(10);
 
-  doc.text("DAY TOTAL", 205, finalY + 12);
-  doc.text(formatCurrency(total), 275, finalY + 12, { align: "right" });
-
-  drawFooter(doc);
+  doc.text("DAY TOTAL", 205, summaryY + 6);
+  doc.text(formatCurrency(total), 275, summaryY + 6, { align: "right" });
 
   doc.save(`Daily-Report-${day}.pdf`);
 };
