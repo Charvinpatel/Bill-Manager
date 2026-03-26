@@ -15,15 +15,6 @@ const formatDate = (date) =>
 const formatCurrency = (num) =>
   "Rs. " + Number(num).toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
-const itemsToText = (items) =>
-  items
-    .map((i) =>
-      i.designType
-        ? `${i.designName} (${i.designType}) x${i.quantity}`
-        : `${i.designName} x${i.quantity}`,
-    )
-    .join(", ");
-
 /* ============================================================
    HEADER
 ============================================================ */
@@ -90,16 +81,25 @@ const drawFooter = (doc) => {
 ============================================================ */
 
 const drawBillsTable = (doc, bills, startY) => {
-  const rows = bills.map((b, i) => [
-    i + 1,
-    b.vendorName || "-",
-    b.billNumber,
-    formatDate(b.billDate || b.createdAt),
-    itemsToText(b.items),
-    b.status.toUpperCase(),
-    formatCurrency(b.subtotal),
-    formatCurrency(b.grandTotal),
-  ]);
+  const rows = [];
+  let rowCount = 1;
+
+  bills.forEach((b) => {
+    b.items.forEach((item, index) => {
+      rows.push([
+        index === 0 ? rowCount++ : "",
+        formatDate(b.billDate || b.createdAt),
+        b.vendorName || "-",
+        b.billNumber,
+        item.designName,
+        item.designType || "-",
+        item.quantity,
+        formatCurrency(item.price),
+        formatCurrency(item.total),
+        index === 0 ? b.status.toUpperCase() : "",
+      ]);
+    });
+  });
 
   autoTable(doc, {
     startY,
@@ -107,13 +107,15 @@ const drawBillsTable = (doc, bills, startY) => {
     head: [
       [
         "#",
+        "Date",
         "Vendor",
         "Bill No.",
-        "Date",
-        "Items",
+        "Design",
+        "Type",
+        "Qty",
+        "Price",
+        "Total",
         "Status",
-        "Subtotal",
-        "Grand Total",
       ],
     ],
 
@@ -136,28 +138,30 @@ const drawBillsTable = (doc, bills, startY) => {
     },
 
     columnStyles: {
-      0: { cellWidth: 10, halign: "left" },
-      1: { cellWidth: 40, halign: "left", fontStyle: "bold" },
-      2: { cellWidth: 32, halign: "left", fontStyle: "bold" },
-      3: { cellWidth: 28, halign: "left" },
-      4: { cellWidth: "auto", halign: "left", fontSize: 7 },
-      5: { cellWidth: 22, halign: "left", fontStyle: "bold" },
-      6: { cellWidth: 32, halign: "left" },
-      7: {
-        cellWidth: 36,
+      0: { cellWidth: 8, halign: "left" },
+      1: { cellWidth: 26, halign: "left" },
+      2: { cellWidth: 35, halign: "left", fontStyle: "bold" },
+      3: { cellWidth: 28, halign: "left", fontStyle: "bold" },
+      4: { cellWidth: "auto", halign: "left" },
+      5: { cellWidth: 25, halign: "left" },
+      6: { cellWidth: 15, halign: "left" },
+      7: { cellWidth: 28, halign: "left" },
+      8: {
+        cellWidth: 28,
         halign: "left",
         fontStyle: "bold",
         textColor: [88, 28, 135],
       },
+      9: { cellWidth: 22, halign: "left", fontStyle: "bold" },
     },
 
     didParseCell: (data) => {
-      if (data.column.index === 5 && data.section === "body") {
+      if (data.column.index === 9 && data.section === "body") {
         const val = data.cell.raw;
 
         if (val === "PAID") data.cell.styles.textColor = [22, 163, 74];
         else if (val === "PENDING") data.cell.styles.textColor = [217, 119, 6];
-        else data.cell.styles.textColor = [107, 114, 128];
+        else if (val) data.cell.styles.textColor = [107, 114, 128];
       }
     },
   });
