@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { Skeleton, Card, Row, Col } from 'antd'
 import { getStats, getAllBills } from '../api'
 import { generateBillPDF } from '../pdfGenerator'
 import StatusBadge from '../components/StatusBadge.jsx'
@@ -32,11 +33,29 @@ const StatCard = ({ label, value, sub, icon, iconBg, iconColor, accent }) => (
   </div>
 )
 
-/* ── Loading ── */
-const Loading = () => (
-  <div style={{ minHeight: '100vh', background: '#F5F3FF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
-    <div className="spinner" />
-    <p style={{ color: '#6B7280', fontSize: 14 }}>Loading dashboard…</p>
+/* ── Loading Skeleton ── */
+const DashboardSkeleton = () => (
+  <div style={{ background: '#F5F3FF', minHeight: '100vh', padding: '28px 20px' }}>
+    <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+      {/* Hero Skeleton */}
+      <Skeleton.Button active style={{ width: '100%', height: 160, borderRadius: 20, marginBottom: 24 }} />
+      
+      {/* Stats Skeleton */}
+      <Row gutter={[18, 18]} style={{ marginBottom: 24 }}>
+        {[1, 2, 3, 4].map(i => (
+          <Col key={i} xs={24} sm={12} lg={6}>
+            <Card style={{ borderRadius: 12 }}>
+              <Skeleton active paragraph={{ rows: 1 }} title={{ width: '60%' }} />
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      {/* Table Skeleton */}
+      <Card style={{ borderRadius: 12 }}>
+        <Skeleton active paragraph={{ rows: 6 }} />
+      </Card>
+    </div>
   </div>
 )
 
@@ -57,7 +76,7 @@ export default function Dashboard() {
     })()
   }, [])
 
-  if (loading) return <Loading />
+  if (loading) return <DashboardSkeleton />
 
   const revenue = stats?.totalRevenue || 0
 
