@@ -80,26 +80,49 @@ const drawFooter = (doc) => {
    BILL TABLE
 ============================================================ */
 
-const drawBillsTable = (doc, bills, startY, title, subtitle) => {
+const drawBillsTable = (doc, bills, startY, title, subtitle, isSingleVendor = false) => {
   const rows = [];
   let rowCount = 1;
 
   bills.forEach((b) => {
     b.items.forEach((item, index) => {
-      rows.push([
+      const row = [
         index === 0 ? rowCount++ : "",
         formatDate(b.billDate || b.createdAt),
-        b.vendorName || "-",
-        b.billNumber,
+      ];
+
+      if (!isSingleVendor) {
+        row.push(b.vendorName || "-");
+      }
+
+      row.push(
         item.designName,
         item.designType || "-",
         item.quantity,
         formatCurrency(item.price),
-        formatCurrency(item.total),
-        index === 0 ? b.status.toUpperCase() : "",
-      ]);
+        formatCurrency(item.total)
+      );
+
+      rows.push(row);
     });
   });
+
+  const head = [
+    "#",
+    "Date",
+  ];
+
+  if (!isSingleVendor) {
+    head.push("Vendor");
+  }
+
+  head.push(
+    "Design",
+    "Type",
+    "Qty",
+    "Price",
+    "Total"
+  );
 
   autoTable(doc, {
     startY,
@@ -110,20 +133,7 @@ const drawBillsTable = (doc, bills, startY, title, subtitle) => {
       drawFooter(doc);
     },
 
-    head: [
-      [
-        "#",
-        "Date",
-        "Vendor",
-        "Bill No.",
-        "Design",
-        "Type",
-        "Qty",
-        "Price",
-        "Total",
-        "Status",
-      ],
-    ],
+    head: [head],
 
     body: rows,
 
@@ -143,33 +153,36 @@ const drawBillsTable = (doc, bills, startY, title, subtitle) => {
       fillColor: [248, 246, 255],
     },
 
-    columnStyles: {
-      0: { cellWidth: 8, halign: "left" },
-      1: { cellWidth: 26, halign: "left" },
-      2: { cellWidth: 35, halign: "left", fontStyle: "bold" },
-      3: { cellWidth: 28, halign: "left", fontStyle: "bold" },
-      4: { cellWidth: "auto", halign: "left" },
-      5: { cellWidth: 25, halign: "left" },
-      6: { cellWidth: 15, halign: "left" },
-      7: { cellWidth: 28, halign: "left" },
-      8: {
-        cellWidth: 28,
-        halign: "left",
-        fontStyle: "bold",
-        textColor: [88, 28, 135],
-      },
-      9: { cellWidth: 22, halign: "left", fontStyle: "bold" },
-    },
-
-    didParseCell: (data) => {
-      if (data.column.index === 9 && data.section === "body") {
-        const val = data.cell.raw;
-
-        if (val === "PAID") data.cell.styles.textColor = [22, 163, 74];
-        else if (val === "PENDING") data.cell.styles.textColor = [217, 119, 6];
-        else if (val) data.cell.styles.textColor = [107, 114, 128];
-      }
-    },
+    columnStyles: isSingleVendor 
+      ? {
+          0: { cellWidth: 10, halign: "left" },
+          1: { cellWidth: 35, halign: "left" },
+          2: { cellWidth: "auto", halign: "left" },
+          3: { cellWidth: 30, halign: "left" },
+          4: { cellWidth: 20, halign: "left" },
+          5: { cellWidth: 35, halign: "left" },
+          6: {
+            cellWidth: 35,
+            halign: "left",
+            fontStyle: "bold",
+            textColor: [88, 28, 135],
+          },
+        }
+      : {
+          0: { cellWidth: 10, halign: "left" },
+          1: { cellWidth: 30, halign: "left" },
+          2: { cellWidth: 40, halign: "left", fontStyle: "bold" },
+          3: { cellWidth: "auto", halign: "left" },
+          4: { cellWidth: 30, halign: "left" },
+          5: { cellWidth: 20, halign: "left" },
+          6: { cellWidth: 35, halign: "left" },
+          7: {
+            cellWidth: 35,
+            halign: "left",
+            fontStyle: "bold",
+            textColor: [88, 28, 135],
+          },
+        },
   });
 
   return doc.lastAutoTable.finalY;
@@ -185,7 +198,7 @@ export const generateBillPDF = (bill) => {
   const W = doc.internal.pageSize.width;
   const H = doc.internal.pageSize.height;
 
-  drawHeader(doc, "INVOICE", `Bill No: ${bill.billNumber}`);
+  drawHeader(doc, "INVOICE");
 
   /* Vendor Info */
 
@@ -200,10 +213,6 @@ export const generateBillPDF = (bill) => {
   if (bill.vendorPhone) doc.text(`Phone: ${bill.vendorPhone}`, 14, 52);
 
   if (bill.vendorAddress) doc.text(`Address: ${bill.vendorAddress}`, 14, 59);
-
-  doc.text(`Status: ${bill.status.toUpperCase()}`, W - 14, 52, {
-    align: "right",
-  });
 
   /* Items Table */
 
@@ -302,7 +311,7 @@ export const generateBillPDF = (bill) => {
    MONTHLY REPORT
 ============================================================ */
 
-export const generateMonthlyPDF = (bills, year, month) => {
+export const generateMonthlyPDF = (bills, year, month, summary, vendors) => {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
   const monthName = new Date(year, month - 1).toLocaleString("en-IN", {
@@ -312,7 +321,32 @@ export const generateMonthlyPDF = (bills, year, month) => {
   const title = "MONTHLY REPORT";
   const subtitle = `${monthName} ${year}`;
 
-  const finalY = drawBillsTable(doc, bills, 40, title, subtitle);
+  const isSingleVendor = vendors && vendors.length === 1;
+  let startY = 40;
+
+  if (isSingleVendor) {
+    const v = vendors[0];
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 10, 78);
+    doc.text(`Vendor: ${v.vendorName}`, 14, 38);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(55, 65, 81);
+    
+    let infoX = 14;
+    if (v.vendorPhone) {
+      doc.text(`Phone: ${v.vendorPhone}`, infoX, 43);
+      infoX += 50;
+    }
+    if (v.vendorAddress) {
+      doc.text(`Address: ${v.vendorAddress}`, infoX, 43);
+    }
+    startY = 48;
+  }
+
+  const finalY = drawBillsTable(doc, bills, startY, title, subtitle, isSingleVendor);
 
   const total = bills.reduce((sum, b) => sum + b.grandTotal, 0);
 
