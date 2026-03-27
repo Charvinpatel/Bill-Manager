@@ -667,12 +667,10 @@ export default function BillHistory() {
                 <table className="sp-table">
                   <thead>
                     <tr>
-                      <th>Bill No</th>
                       <th>Vendor</th>
                       <th style={{ textAlign: "center" }}>Items</th>
                       <th>Date</th>
                       <th style={{ textAlign: "right" }}>Amount</th>
-                      <th style={{ textAlign: "center" }}>Status</th>
                       <th style={{ textAlign: "center" }}>Actions</th>
                     </tr>
                   </thead>
@@ -680,21 +678,6 @@ export default function BillHistory() {
                     {bills.map((bill) => (
                       <React.Fragment key={bill._id}>
                         <tr>
-                          <td>
-                            <span
-                              style={{
-                                fontFamily: "JetBrains Mono,monospace",
-                                color: "#7C3AED",
-                                fontWeight: 700,
-                                fontSize: 13,
-                                background: "#EDE9FE",
-                                padding: "2px 8px",
-                                borderRadius: 6,
-                              }}
-                            >
-                              {bill.billNumber}
-                            </span>
-                          </td>
                           <td>
                             <p style={{ fontWeight: 600, color: "#111827" }}>
                               {bill.vendorName}
@@ -740,24 +723,6 @@ export default function BillHistory() {
                             }}
                           >
                             ₹{bill.grandTotal.toLocaleString("en-IN")}
-                          </td>
-                          <td style={{ textAlign: "center" }}>
-                            <Select
-                              value={bill.status}
-                              style={{
-                                ...statusStyle(bill.status),
-                                width: 120,
-                                height: "32px",
-                              }}
-                              onChange={(value) =>
-                                handleStatusChange(bill._id, value)
-                              }
-                              options={[
-                                { value: "pending", label: "Pending" },
-                                { value: "paid", label: "Paid" },
-                                { value: "unpaid", label: "Unpaid" },
-                              ]}
-                            />
                           </td>
                           <td>
                             <div
