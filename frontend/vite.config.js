@@ -10,5 +10,15 @@ export default defineConfig({
         changeOrigin: true,
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-ui': ['antd'],
+          'vendor-pdf': ['jspdf', 'jspdf-autotable'],
+        }
+      }
+    }
   }
 })
